@@ -13,7 +13,7 @@ def chat_reply(prompt):
     api_key = os.getenv("OPENAI_API_KEY")  # picks key only if available
 
     if not api_key:
-        return "⚠️ OpenAI API key is disabled by admin. Chat features are currently unavailable."
+        return "⚠️ OpenAI API key is disabled by sudheer debbati. Chat features are currently unavailable."
 
     client = OpenAI(api_key=api_key)
 
