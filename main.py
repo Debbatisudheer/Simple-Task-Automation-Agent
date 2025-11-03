@@ -1,5 +1,5 @@
 # ============================================================
-# main.py  (TEXT-ONLY JARVIS, NO VOICE)
+# main.py  (TEXT-ONLY JARVIS - NO VOICE)
 # ============================================================
 
 import os
@@ -8,6 +8,7 @@ from email_agent import send_email
 from reminder_agent import set_reminder_with_email as set_reminder
 from file_agent import organize_files
 from chat_agent import chat_reply
+
 
 HELP = """
 ✅ You can type commands like:
@@ -36,33 +37,37 @@ Type **exit** to quit.
 
 
 def dispatch_one(intent: str, slots: dict):
-    """Perform the action based on extracted slots"""
+    """Perform task based on extracted slots"""
     print(f"\n➡️ Debug: Intent={intent}, Slots={slots}")
 
     # --------------------------------------------------------
-    # ✅ CHAT MODE
+    # ✅ CHAT MODE (fallback message when API key disabled)
     # --------------------------------------------------------
     if intent == "chat":
         query = slots.get("query") or "introduce yourself"
         reply = chat_reply(query)
-        print(f"🧠 Jarvis: {reply}")
+
+        if "disabled by admin" in reply.lower():
+            print("⚠️ OpenAI API key is disabled by admin. Chat features unavailable.")
+        else:
+            print(f"🧠 Jarvis: {reply}")
         return
 
     # --------------------------------------------------------
-    # ✅ SEND EMAIL (slot filling if needed)
+    # ✅ SEND EMAIL
     # --------------------------------------------------------
     if intent == "send_email":
         to = slots.get("to")
         subject = slots.get("subject") or "Automated Email"
         msg = slots.get("message")
 
-        # Missing email → wait for input
+        # Missing email → ask user
         if not to:
             print("🟡 Who should I send it to?")
             reply = input("📥 Email: ")
             to, _ = extract_email_and_message(reply)
 
-        # Missing message → wait for input
+        # Missing message → ask user
         if not msg:
             print("🟡 What should be the message?")
             msg = input("📥 Message: ")
@@ -72,8 +77,7 @@ def dispatch_one(intent: str, slots: dict):
             return
 
         send_email(to, subject, msg)
-        print("✅ Email sent successfully!")
-        print(f"📧 Sent to: {to}")
+        print(f"✅ Email sent to: {to}")
         return
 
     # --------------------------------------------------------
@@ -82,7 +86,7 @@ def dispatch_one(intent: str, slots: dict):
     if intent == "set_reminder":
         time_str = slots.get("time")
         message = slots.get("message")
-        email_to = slots.get("email_to")  # explicit email from user
+        email_to = slots.get("email_to")  # extracted if user says “to my email someone@example.com”
 
         # If user said "email me", fallback to env
         if not email_to and slots.get("email_me"):
@@ -118,51 +122,29 @@ def dispatch_one(intent: str, slots: dict):
     # --------------------------------------------------------
     # ❓ UNKNOWN
     # --------------------------------------------------------
-    print("❓ Unknown command. Type 'help' to see what I can do.")
+    print("❓ Unknown command. Type `help` to see what I can do.")
     print(HELP)
 
 
 # ============================================================
-# MAIN LOOP
+# ✅ MAIN LOOP (NO DUPLICATION)
 # ============================================================
+
 if __name__ == "__main__":
     print("\n🤖 Jarvis Text Assistant Ready.")
-    print("Type 'help' to see commands. Type 'exit' to quit.\n")
+    print("Type `help` to see commands. Type `exit` to quit.\n")
 
     while True:
-        user = input("\n🧑 You: ")
+        user = input("\n🧑 You: ").strip()
 
-        if user.lower().strip() == "exit":
+        if user.lower() in ["exit", "quit", "stop"]:
             print("👋 Bye! Have a great day.")
             break
 
-        if user.lower().strip() == "help":
+        if user.lower() == "help":
             print(HELP)
             continue
 
         actions = interpret(user)
-        for a in actions or []:
-            dispatch_one(a.get("intent"), a.get("slots", {}))
-
-
-
-
-# --------------------------------------------------
-#  MAIN LOOP (NO VOICE INPUT)
-# --------------------------------------------------
-
-if __name__ == "__main__":
-    print("\n🤖 Jarvis Text Assistant Ready.")
-    print("Type 'exit' to quit.\n")
-
-    while True:
-        user_input = input("\n🧑 You: ")
-
-        if user_input.lower() in ["exit", "quit", "stop"]:
-            print("👋 Goodbye!")
-            break
-
-        actions = interpret(user_input)
-
         for a in actions or []:
             dispatch_one(a.get("intent"), a.get("slots", {}))
